@@ -6,6 +6,7 @@ import {
   Video, 
   Upload, 
   BarChart3,
+  Settings,
   ChevronLeft,
   ChevronRight,
   Mic
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Vidéothèque", href: "/library", icon: Video },
   { name: "Upload", href: "/upload", icon: Upload },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Configuration", href: "/setup", icon: Settings },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

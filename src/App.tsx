@@ -11,6 +11,7 @@ import Scripts from "./pages/Scripts";
 import Library from "./pages/Library";
 import Upload from "./pages/Upload";
 import Analytics from "./pages/Analytics";
+import Setup from "./pages/Setup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/library" element={<Library />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/setup" element={<Setup />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
