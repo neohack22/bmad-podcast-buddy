@@ -7,6 +7,10 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Transcription from "./pages/Transcription";
+import Scripts from "./pages/Scripts";
+import Library from "./pages/Library";
+import Upload from "./pages/Upload";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +26,10 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/transcription" element={<Transcription />} />
+            <Route path="/scripts" element={<Scripts />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/upload" element={<Upload />} />
+            <Route path="/analytics" element={<Analytics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
