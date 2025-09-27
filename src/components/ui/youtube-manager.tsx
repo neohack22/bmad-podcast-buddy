@@ -69,10 +69,10 @@ export function YouTubeManager({ onConnectionChange }: YouTubeManagerProps) {
 
       // Demander l'URL d'autorisation
       const { data: functionData, error: functionError } = await supabase.functions.invoke('youtube-oauth', {
-        body: JSON.stringify({ 
+        body: { 
           action: 'get_auth_url',
           state: user.id 
-        })
+        }
       });
 
       if (functionError) {
