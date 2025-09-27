@@ -17,10 +17,29 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const body = await req.json()
-    const { action, code, state, user_id } = body
+    let body;
+    try {
+      const bodyText = await req.text();
+      console.log('Raw request body:', bodyText);
+      
+      if (!bodyText.trim()) {
+        throw new Error('Empty request body');
+      }
+      
+      body = JSON.parse(bodyText);
+    } catch (error) {
+      console.error('Erreur parsing JSON:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
-    console.log('YouTube OAuth request:', { action, state: state || user_id })
+    const { action, code, state, user_id } = body;
+    console.log('YouTube OAuth request:', { action, state: state || user_id });
 
     if (action === 'get_auth_url') {
       // Générer l'URL d'autorisation YouTube
