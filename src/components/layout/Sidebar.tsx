@@ -12,6 +12,7 @@ import {
   Mic
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -68,37 +69,61 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="p-4 space-y-2">
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          const isScriptsIA = item.href === "/scripts";
-          const isDisabled = !isScriptsIA;
-          
-          return (
-            <Button
-              key={item.name}
-              variant={isActive ? "default" : "ghost"}
-              className={cn(
-                "w-full justify-start gap-3 h-11",
-                isActive 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && "px-2",
-                isDisabled && "opacity-50 cursor-not-allowed"
-              )}
-              onClick={() => {
-                if (!isDisabled) {
-                  navigate(item.href);
-                }
-              }}
-              disabled={isDisabled}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && (
-                <span className="font-medium">{item.name}</span>
-              )}
-            </Button>
-          );
-        })}
+        <TooltipProvider>
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            const isScriptsIA = item.href === "/scripts";
+            const isDisabled = !isScriptsIA;
+            
+            const buttonContent = (
+              <Button
+                key={item.name}
+                variant={isActive ? "default" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3 h-11",
+                  isActive 
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  collapsed && "px-2",
+                  isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                )}
+                onClick={() => {
+                  if (!isDisabled) {
+                    navigate(item.href);
+                  }
+                }}
+                disabled={isDisabled}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!collapsed && (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-medium">{item.name}</span>
+                    {isDisabled && (
+                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                        Bientôt
+                      </span>
+                    )}
+                  </div>
+                )}
+              </Button>
+            );
+
+            if (isDisabled) {
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    {buttonContent}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Cette fonctionnalité sera bientôt disponible</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return buttonContent;
+          })}
+        </TooltipProvider>
       </nav>
 
       {/* Footer */}
