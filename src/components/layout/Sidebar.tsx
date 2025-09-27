@@ -73,7 +73,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             const isScriptsIA = item.href === "/scripts";
-            const isDisabled = !isScriptsIA;
+            const isProfil = item.href === "/profile";
+            const isDisabled = !isScriptsIA && !isProfil;
             
             const buttonContent = (
               <Button
