@@ -1,41 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Eye, Users, Heart, Clock, Download } from "lucide-react";
+import { TrendingUp, TrendingDown, Eye, Users, Heart, Clock, Download, LogIn } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { LoginDialog } from "@/components/ui/login-dialog";
 
-const mockData = {
+interface AnalyticsData {
   kpis: {
-    totalViews: 15230,
-    avgEngagement: 12.5,
-    subscribersGained: 320,
-    avgWatchTime: 245,
-  },
-  timeseries: [
-    { date: "01/09", views: 500, engagement: 10 },
-    { date: "02/09", views: 630, engagement: 12 },
-    { date: "03/09", views: 480, engagement: 8 },
-    { date: "04/09", views: 720, engagement: 15 },
-    { date: "05/09", views: 890, engagement: 18 },
-    { date: "06/09", views: 650, engagement: 14 },
-    { date: "07/09", views: 780, engagement: 16 },
-  ],
-  platforms: [
-    { name: "YouTube", views: 12500, subscribers: 280, engagement: 15 },
-    { name: "Upload interne", views: 2730, subscribers: 40, engagement: 8 },
-  ],
-  engagement: [
-    { name: "Likes", value: 1250, color: "#22c55e" },
-    { name: "Commentaires", value: 380, color: "#3b82f6" },
-    { name: "Partages", value: 120, color: "#f59e0b" },
-  ],
-};
+    totalViews: number;
+    avgEngagement: number;
+    subscribersGained: number;
+    avgWatchTime: number;
+  };
+  timeseries: Array<{ date: string; views: number; engagement: number }>;
+  platforms: Array<{ name: string; views: number; subscribers: number; engagement: number }>;
+  engagement: Array<{ name: string; value: number; color: string }>;
+}
 
 export default function Analytics() {
   const [period, setPeriod] = useState("30d");
   const [selectedPlatforms, setSelectedPlatforms] = useState("all");
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Check auth status
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (!user) setLoading(false);
+    };
+    
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        fetchAnalyticsData();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -49,36 +61,238 @@ export default function Analytics() {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const kpiCards = [
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch videos and analytics data for the current user
+      const { data: videos, error: videosError } = await supabase
+        .from('videos')
+        .select(`
+          id,
+          title,
+          platform,
+          duration,
+          published_at,
+          analytics_data (
+            date,
+            views,
+            likes,
+            comments,
+            shares,
+            watch_time_seconds,
+            subscribers_gained
+          )
+        `)
+        .eq('status', 'active')
+        .eq('user_id', user?.id);
+
+      if (videosError) throw videosError;
+
+      if (!videos || videos.length === 0) {
+        // No data available - return empty structure
+        setData({
+          kpis: {
+            totalViews: 0,
+            avgEngagement: 0,
+            subscribersGained: 0,
+            avgWatchTime: 0,
+          },
+          timeseries: [],
+          platforms: [],
+          engagement: []
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Process the data
+      let totalViews = 0;
+      let totalLikes = 0;
+      let totalComments = 0;
+      let totalShares = 0;
+      let totalWatchTime = 0;
+      let totalSubscribers = 0;
+      
+      const platformStats: Record<string, { views: number; subscribers: number; interactions: number }> = {};
+      const timeseriesMap: Record<string, { views: number; interactions: number }> = {};
+
+      videos.forEach(video => {
+        const platform = video.platform === 'youtube' ? 'YouTube' : 'Upload interne';
+        
+        if (!platformStats[platform]) {
+          platformStats[platform] = { views: 0, subscribers: 0, interactions: 0 };
+        }
+
+        if (video.analytics_data) {
+          video.analytics_data.forEach((analytics: any) => {
+            totalViews += analytics.views || 0;
+            totalLikes += analytics.likes || 0;
+            totalComments += analytics.comments || 0;
+            totalShares += analytics.shares || 0;
+            totalWatchTime += analytics.watch_time_seconds || 0;
+            totalSubscribers += analytics.subscribers_gained || 0;
+
+            platformStats[platform].views += analytics.views || 0;
+            platformStats[platform].subscribers += analytics.subscribers_gained || 0;
+            platformStats[platform].interactions += (analytics.likes || 0) + (analytics.comments || 0) + (analytics.shares || 0);
+
+            // Build timeseries data (last 7 days)
+            const date = new Date(analytics.date);
+            const dateKey = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+            
+            if (!timeseriesMap[dateKey]) {
+              timeseriesMap[dateKey] = { views: 0, interactions: 0 };
+            }
+            timeseriesMap[dateKey].views += analytics.views || 0;
+            timeseriesMap[dateKey].interactions += (analytics.likes || 0) + (analytics.comments || 0) + (analytics.shares || 0);
+          });
+        }
+      });
+
+      // Calculate engagement rate
+      const avgEngagement = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
+      const avgWatchTime = totalViews > 0 ? totalWatchTime / totalViews : 0;
+
+      // Build final data structure
+      const analyticsData: AnalyticsData = {
+        kpis: {
+          totalViews,
+          avgEngagement: Math.round(avgEngagement * 100) / 100,
+          subscribersGained: totalSubscribers,
+          avgWatchTime: Math.round(avgWatchTime),
+        },
+        timeseries: Object.entries(timeseriesMap)
+          .map(([date, stats]) => ({
+            date,
+            views: stats.views,
+            engagement: stats.views > 0 ? Math.round((stats.interactions / stats.views) * 100) : 0
+          }))
+          .slice(-7), // Last 7 days
+        platforms: Object.entries(platformStats).map(([name, stats]) => ({
+          name,
+          views: stats.views,
+          subscribers: stats.subscribers,
+          engagement: stats.views > 0 ? Math.round((stats.interactions / stats.views) * 100) : 0
+        })),
+        engagement: [
+          { name: "Likes", value: totalLikes, color: "#22c55e" },
+          { name: "Commentaires", value: totalComments, color: "#3b82f6" },
+          { name: "Partages", value: totalShares, color: "#f59e0b" },
+        ]
+      };
+
+      setData(analyticsData);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données d'analytics",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAnalyticsData();
+    }
+  }, [period, user]);
+
+  // Show login required message if not authenticated
+  if (!user && !loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+            <p className="text-muted-foreground">
+              Tableau de bord et statistiques de performance
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="text-muted-foreground">
+              <LogIn className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">Connexion requise</p>
+              <p className="mb-4">Connectez-vous pour voir vos statistiques d'analytics.</p>
+              <LoginDialog onAuthSuccess={() => setLoading(true)}>
+                <Button>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Se connecter
+                </Button>
+              </LoginDialog>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const kpiCards = data ? [
     {
       title: "Vues totales",
-      value: formatNumber(mockData.kpis.totalViews),
+      value: formatNumber(data.kpis.totalViews),
       change: "+12.5%",
-      trend: "up",
+      trend: "up" as const,
       icon: Eye,
     },
     {
       title: "Engagement moyen",
-      value: `${mockData.kpis.avgEngagement}%`,
+      value: `${data.kpis.avgEngagement}%`,
       change: "+2.1%",
-      trend: "up",
+      trend: "up" as const,
       icon: Heart,
     },
     {
       title: "Abonnés gagnés",
-      value: formatNumber(mockData.kpis.subscribersGained),
+      value: formatNumber(data.kpis.subscribersGained),
       change: "+8.7%",
-      trend: "up",
+      trend: "up" as const,
       icon: Users,
     },
     {
       title: "Temps moyen",
-      value: formatTime(mockData.kpis.avgWatchTime),
+      value: formatTime(data.kpis.avgWatchTime),
       change: "-1.2%",
-      trend: "down",
+      trend: "down" as const,
       icon: Clock,
     },
-  ];
+  ] : [];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+            <p className="text-muted-foreground">
+              Chargement des données...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+            <p className="text-muted-foreground">
+              Erreur lors du chargement des données
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -167,7 +381,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockData.timeseries}>
+              <LineChart data={data.timeseries}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -191,7 +405,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockData.platforms}>
+              <BarChart data={data.platforms}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -212,7 +426,7 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={mockData.engagement}
+                  data={data.engagement}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -221,7 +435,7 @@ export default function Analytics() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {mockData.engagement.map((entry, index) => (
+                  {data.engagement.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -239,7 +453,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockData.platforms.map((platform) => (
+              {data.platforms.map((platform) => (
                 <div key={platform.name} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <p className="font-medium">{platform.name}</p>

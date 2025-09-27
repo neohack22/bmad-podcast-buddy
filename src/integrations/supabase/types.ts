@@ -108,22 +108,7 @@ export type Database = {
       }
     }
     Views: {
-      analytics_summary: {
-        Row: {
-          avg_views_per_video: number | null
-          engagement_rate: number | null
-          platform: string | null
-          total_comments: number | null
-          total_likes: number | null
-          total_shares: number | null
-          total_subscribers_gained: number | null
-          total_videos: number | null
-          total_views: number | null
-          total_watch_time_seconds: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
