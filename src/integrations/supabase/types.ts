@@ -14,10 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_data: {
+        Row: {
+          comments: number
+          created_at: string
+          date: string
+          id: string
+          likes: number
+          shares: number
+          subscribers_gained: number
+          video_id: string
+          views: number
+          watch_time_seconds: number
+        }
+        Insert: {
+          comments?: number
+          created_at?: string
+          date: string
+          id?: string
+          likes?: number
+          shares?: number
+          subscribers_gained?: number
+          video_id: string
+          views?: number
+          watch_time_seconds?: number
+        }
+        Update: {
+          comments?: number
+          created_at?: string
+          date?: string
+          id?: string
+          likes?: number
+          shares?: number
+          subscribers_gained?: number
+          video_id?: string
+          views?: number
+          watch_time_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_data_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: number | null
+          id: string
+          platform: string
+          platform_video_id: string | null
+          published_at: string | null
+          status: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          id?: string
+          platform: string
+          platform_video_id?: string | null
+          published_at?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          id?: string
+          platform?: string
+          platform_video_id?: string | null
+          published_at?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      analytics_summary: {
+        Row: {
+          avg_views_per_video: number | null
+          engagement_rate: number | null
+          platform: string | null
+          total_comments: number | null
+          total_likes: number | null
+          total_shares: number | null
+          total_subscribers_gained: number | null
+          total_videos: number | null
+          total_views: number | null
+          total_watch_time_seconds: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
