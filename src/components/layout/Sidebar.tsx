@@ -86,14 +86,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow" 
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   collapsed && "px-2",
-                  isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                  isDisabled && "opacity-75"
                 )}
-                onClick={() => {
-                  if (!isDisabled) {
-                    navigate(item.href);
-                  }
-                }}
-                disabled={isDisabled}
+                onClick={() => navigate(item.href)}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
                 {!collapsed && (
@@ -116,7 +111,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     {buttonContent}
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    <p>Cette fonctionnalité sera bientôt disponible</p>
+                    <p>Fonctionnalité en préversion - bientôt disponible</p>
                   </TooltipContent>
                 </Tooltip>
               );
