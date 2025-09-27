@@ -64,6 +64,11 @@ export default function Analytics() {
   };
 
   const fetchAnalyticsData = async () => {
+    if (!user?.id) {
+      console.log('No user authenticated');
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -87,7 +92,7 @@ export default function Analytics() {
           )
         `)
         .eq('status', 'active')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (videosError) throw videosError;
 

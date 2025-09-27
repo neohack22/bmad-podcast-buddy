@@ -63,12 +63,16 @@ export function YouTubeManager({ onConnectionChange }: YouTubeManagerProps) {
 
     setLoading(true);
     try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
       // Demander l'URL d'autorisation
       const { data: functionData, error: functionError } = await supabase.functions.invoke('youtube-oauth', {
-        body: { 
+        body: JSON.stringify({ 
           action: 'get_auth_url',
           state: user.id 
-        }
+        })
       });
 
       if (functionError) {
