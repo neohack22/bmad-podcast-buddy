@@ -17,7 +17,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { action, code, state } = await req.json()
+    const body = await req.json()
+    const { action, code, state, user_id } = body
+    
+    console.log('YouTube OAuth request:', { action, state: state || user_id })
 
     if (action === 'get_auth_url') {
       // Générer l'URL d'autorisation YouTube
@@ -107,7 +110,6 @@ serve(async (req) => {
 
     } else if (action === 'disconnect') {
       // Déconnecter YouTube
-      const { user_id } = await req.json()
       
       const { error } = await supabaseAdmin
         .from('youtube_tokens')
