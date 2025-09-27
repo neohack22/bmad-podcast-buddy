@@ -22,11 +22,37 @@ serve(async (req) => {
     // pour synchroniser automatiquement les analytics
 
     const { data: users } = await supabaseAdmin
-      .from('user_youtube_tokens')
-      .select('user_id, access_token, refresh_token')
+      .from('youtube_tokens')
+      .select('user_id, access_token, refresh_token, expires_at, channel_id')
 
     for (const user of users || []) {
       try {
+        // Vérifier si le token a expiré et le rafraîchir si nécessaire
+        let accessToken = user.access_token;
+        const expiresAt = new Date(user.expires_at);
+        const now = new Date();
+        
+        if (expiresAt <= now) {
+          console.log(`Rafraîchissement du token pour l'utilisateur ${user.user_id}`);
+          const newTokens = await refreshYouTubeToken(user.refresh_token);
+          
+          if (newTokens) {
+            accessToken = newTokens.access_token;
+            
+            // Mettre à jour les tokens en base
+            await supabaseAdmin
+              .from('youtube_tokens')
+              .update({
+                access_token: newTokens.access_token,
+                expires_at: new Date(Date.now() + (newTokens.expires_in * 1000)).toISOString(),
+              })
+              .eq('user_id', user.user_id);
+          } else {
+            console.error(`Impossible de rafraîchir le token pour l'utilisateur ${user.user_id}`);
+            continue;
+          }
+        }
+
         // 1. Récupérer les vidéos YouTube de l'utilisateur
         const { data: videos } = await supabaseAdmin
           .from('videos')
@@ -38,7 +64,7 @@ serve(async (req) => {
         for (const video of videos || []) {
           const analytics = await fetchYouTubeAnalytics(
             video.platform_video_id,
-            user.access_token
+            accessToken
           )
 
           // 3. Insérer/mettre à jour dans analytics_data
@@ -75,6 +101,38 @@ serve(async (req) => {
     )
   }
 })
+
+async function refreshYouTubeToken(refreshToken: string) {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: Deno.env.get('GOOGLE_CLIENT_ID')!,
+        client_secret: Deno.env.get('GOOGLE_CLIENT_SECRET')!,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('Erreur refresh token:', data.error_description);
+      return null;
+    }
+
+    return {
+      access_token: data.access_token,
+      expires_in: data.expires_in,
+    };
+  } catch (error) {
+    console.error('Erreur lors du rafraîchissement du token:', error);
+    return null;
+  }
+}
 
 async function fetchYouTubeAnalytics(videoId: string, accessToken: string) {
   const today = new Date().toISOString().split('T')[0]

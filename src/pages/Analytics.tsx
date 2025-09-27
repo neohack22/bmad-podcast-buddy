@@ -8,6 +8,8 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LoginDialog } from "@/components/ui/login-dialog";
+import { YouTubeManager } from "@/components/ui/youtube-manager";
+import { YouTubeVideoManager } from "@/components/ui/youtube-video-manager";
 
 interface AnalyticsData {
   kpis: {
@@ -323,6 +325,12 @@ export default function Analytics() {
           </Button>
         </div>
       </div>
+
+      {/* Gestionnaire YouTube */}
+      <YouTubeManager onConnectionChange={() => fetchAnalyticsData()} />
+      
+      {/* Gestionnaire de vidéos YouTube */}
+      <YouTubeVideoManager onVideoAdded={() => fetchAnalyticsData()} />
 
       {/* Filtres */}
       <Card>

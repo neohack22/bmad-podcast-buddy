@@ -71,10 +71,12 @@ export type Database = {
           platform_video_id: string | null
           published_at: string | null
           status: string
+          sync_enabled: boolean | null
           thumbnail_url: string | null
           title: string
           updated_at: string
           user_id: string
+          youtube_channel_id: string | null
         }
         Insert: {
           created_at?: string
@@ -85,10 +87,12 @@ export type Database = {
           platform_video_id?: string | null
           published_at?: string | null
           status?: string
+          sync_enabled?: boolean | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string
           user_id: string
+          youtube_channel_id?: string | null
         }
         Update: {
           created_at?: string
@@ -99,8 +103,46 @@ export type Database = {
           platform_video_id?: string | null
           published_at?: string | null
           status?: string
+          sync_enabled?: boolean | null
           thumbnail_url?: string | null
           title?: string
+          updated_at?: string
+          user_id?: string
+          youtube_channel_id?: string | null
+        }
+        Relationships: []
+      }
+      youtube_tokens: {
+        Row: {
+          access_token: string
+          channel_id: string | null
+          channel_name: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          channel_id?: string | null
+          channel_name?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          channel_id?: string | null
+          channel_name?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
           updated_at?: string
           user_id?: string
         }
