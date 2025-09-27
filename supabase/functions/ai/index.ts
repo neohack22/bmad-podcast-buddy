@@ -12,10 +12,50 @@ serve(async (req) => {
   }
 
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    
+    // Support both simple message and script generation requests
+    let message = "";
+    let systemPrompt = "You are a helpful AI assistant specializing in content creation for podcasters and video creators. You help generate high-quality scripts, descriptions, and content based on user input. Always provide creative, engaging, and well-structured content that matches the requested tone and style.";
+    
+    if (body.message) {
+      // Simple message request
+      message = body.message;
+    } else if (body.template && body.inputs) {
+      // Script generation request
+      const { template, inputs, variants = 1 } = body;
+      const { topic, tone = "neutre", length = "medium", keywords = [], language = "auto" } = inputs;
+      
+      if (!topic) {
+        return new Response(JSON.stringify({ error: "Topic is required for script generation" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required" }), {
+      // Build specific prompt based on template
+      const templatePrompts: Record<string, string> = {
+        intro: "Créez une introduction engageante de podcast",
+        outline: "Créez un plan détaillé structuré",
+        description: "Rédigez une description YouTube optimisée",
+        title: "Générez des titres accrocheurs",
+        show_notes: "Rédigez des notes d'épisode complètes"
+      };
+
+      const templateName = templatePrompts[template as string] || "Créez du contenu";
+      const keywordsText = keywords.length > 0 ? ` Mots-clés à inclure: ${keywords.join(", ")}.` : "";
+      const lengthText = length === "short" ? "court" : length === "long" ? "long" : "de longueur moyenne";
+      
+      message = `${templateName} sur le sujet: "${topic}". 
+      Ton: ${tone}. 
+      Format: ${lengthText}.${keywordsText}
+      Langue: ${language === "auto" ? "français" : language}.
+      
+      Répondez avec du contenu de qualité professionnelle, bien structuré et engageant.`;
+      
+      systemPrompt = `Vous êtes un expert en création de contenu pour podcasters et créateurs vidéo. Vous créez du contenu de haute qualité selon les spécifications demandées. Votre réponse doit être directement utilisable, bien formatée et adaptée au média podcast/vidéo.`;
+    } else {
+      return new Response(JSON.stringify({ error: "Message or template/inputs required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -44,10 +84,9 @@ serve(async (req) => {
 				model: "google/gemini-2.5-flash",
 				
         messages: [
-					
           {
             role: "system",
-            content: "You are a helpful AI assistant specializing in content creation for podcasters and video creators. You help generate high-quality scripts, descriptions, and content based on user input. Always provide creative, engaging, and well-structured content that matches the requested tone and style.",
+            content: systemPrompt,
           },
 					
           {
@@ -85,9 +124,23 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ response: aiMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Return response in format expected by Scripts page
+    if (body.template) {
+      return new Response(JSON.stringify({ 
+        response: aiMessage,
+        title: `Script ${body.template}`,
+        content: aiMessage,
+        variants: [{ variant: "A", title: `Script ${body.template}`, content: aiMessage }],
+        request_id: crypto.randomUUID(),
+        latency_ms: 0
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else {
+      return new Response(JSON.stringify({ response: aiMessage }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   } catch (error) {
     console.error("Error in AI call:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
