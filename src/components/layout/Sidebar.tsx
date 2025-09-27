@@ -70,6 +70,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className="p-4 space-y-2">
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
+          const isScriptsIA = item.href === "/scripts";
+          const isDisabled = !isScriptsIA;
           
           return (
             <Button
@@ -80,9 +82,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 isActive 
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow" 
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && "px-2"
+                collapsed && "px-2",
+                isDisabled && "opacity-50 cursor-not-allowed"
               )}
-              onClick={() => navigate(item.href)}
+              onClick={() => {
+                if (!isDisabled) {
+                  navigate(item.href);
+                }
+              }}
+              disabled={isDisabled}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {!collapsed && (
